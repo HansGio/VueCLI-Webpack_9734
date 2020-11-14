@@ -26,17 +26,32 @@
 					</v-chip>
 				</template>
 				<template v-slot:[`item.actions`]="{ item }">
-					<v-icon color="blue" small class="mr-2" @click="editItem(item)">
+					<v-icon color="blue" medium class="mr-2" @click="editItem(item)">
 						mdi-pencil
 					</v-icon>
-					<v-icon color="red" small @click="deleteItem(item)">
+					<v-icon color="red" medium @click="deleteItem(item)">
 						mdi-delete
 					</v-icon>
 				</template>
 				<template v-slot:[`item.checkbox`]="{ item }">
-					<v-checkbox v-model="selectedTodos" label="" v-bind="item"></v-checkbox>
+					<v-checkbox v-model="item.isSelected"></v-checkbox>
 				</template>
 			</v-data-table>
+		</v-card>
+
+		<v-card v-if="todos.filter((todo) => todo.isSelected).length > 0" class="mt-5">
+			<v-card-title>
+				<span class="font-weight-bold">Delete Multiple</span>
+			</v-card-title>
+			<v-card-text>
+				<span class="font-weight-bold ml-1">Todo terpilih:</span>
+				<ul v-for="(todo, index) in todos.filter((todo) => todo.isSelected)" :key="index">
+					<li>{{ todo.task }}</li>
+				</ul>
+				<v-btn class="mt-6" color="red" dark @click="dialogMultiple = true">
+					Hapus Semua
+				</v-btn>
+			</v-card-text>
 		</v-card>
 
 		<v-dialog v-model="dialog" persistent max-width="600px">
@@ -88,6 +103,27 @@
 			</v-card>
 		</v-dialog>
 
+		<v-dialog v-model="dialogMultiple" persistent max-width="450px">
+			<v-card>
+				<v-card-title>
+					<span class="headline font-weight-bold"
+						>Yakin ingin menghapus
+						{{ todos.filter((todo) => todo.isSelected).length }} todo?</span
+					>
+				</v-card-title>
+				<v-card-actions>
+					<v-spacer></v-spacer>
+					<v-spacer></v-spacer>
+					<v-btn color="green darken-1" text @click="dialogMultiple = false">
+						Tidak
+					</v-btn>
+					<v-btn color="red darken-1" text @click="confirmDeleteMultiple">
+						Ya
+					</v-btn>
+				</v-card-actions>
+			</v-card>
+		</v-dialog>
+
 		<v-dialog v-model="dialogFinished" persistent max-width="1000px">
 			<v-card>
 				<v-card-title>
@@ -123,6 +159,7 @@ export default {
 			dialog: false,
 			dialogDelete: false,
 			dialogFinished: false,
+			dialogMultiple: false,
 			editIndex: -1,
 			headers: [
 				{
@@ -151,24 +188,27 @@ export default {
 					task: "bernafas",
 					priority: "Penting",
 					note: "huffttt",
+					isSelected: false,
 				},
 				{
 					task: "nongkrong",
 					priority: "Tidak penting",
 					note: "bersama tman2",
+					isSelected: false,
 				},
 				{
 					task: "masak",
 					priority: "Biasa",
 					note: "masak air 500ml",
+					isSelected: false,
 				},
 			],
 			finishedTodos: [],
-			selectedTodos: [],
 			formTodo: {
 				task: null,
 				priority: null,
 				note: null,
+				isSelected: false,
 			},
 		};
 	},
@@ -176,10 +216,7 @@ export default {
 		save() {
 			if (this.editIndex > -1) this.todos.splice(this.editIndex, 1, this.formTodo);
 			else this.todos.push(this.formTodo);
-
-			this.resetForm();
-			this.dialog = false;
-			this.editIndex = -1;
+			this.cancel();
 		},
 		cancel() {
 			this.resetForm();
@@ -191,15 +228,16 @@ export default {
 				task: null,
 				priority: null,
 				note: null,
+				isSelected: false,
 			};
 		},
 		editItem(item) {
 			this.editIndex = this.todos.indexOf(item);
-
 			this.formTodo = {
 				task: item.task,
 				priority: item.priority,
 				note: item.note,
+				isSelected: item.isSelected,
 			};
 			this.dialog = true;
 		},
@@ -214,13 +252,17 @@ export default {
 		confirmDelete() {
 			this.finishedTodos.push(this.todos[this.editIndex]);
 			this.todos.splice(this.editIndex, 1);
-			this.dialogDelete = false;
-			this.editIndex = -1;
+			this.cancelDelete();
 		},
 		getColor(prioritas) {
 			if (prioritas === "Penting") return "red";
 			else if (prioritas === "Biasa") return "blue";
 			else return "green";
+		},
+		confirmDeleteMultiple() {
+			this.finishedTodos.push(...this.todos.filter((todo) => todo.isSelected));
+			this.todos = this.todos.filter((todo) => !todo.isSelected);
+			this.dialogMultiple = false;
 		},
 	},
 };
